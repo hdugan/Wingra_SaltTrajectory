@@ -2,6 +2,7 @@
 library(sf)
 
 daneroads = st_read('GISdata/DANE_ROADS_ROW_2024.gdb/', layer = 'DANE_ROADS_2024')
+# st_write(daneroads, 'GISdata/daneroads.shp')
 yaharaLakes = st_read('GISdata/YaharaLakes/YaharaLakes_DaneCty.shp')
 
 wingraWS = st_read('GISdata/YaharaBasins/Wingra_Basin.shp')
