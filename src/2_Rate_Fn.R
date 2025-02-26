@@ -58,27 +58,29 @@ dSalt <- function(time, state, pars, p_df, salt_df) {
     # Extract the dynamic p based on the current time
     p <- p_df$p[which.min(abs(p_df$time - time))]
     
-    # Extract dynamic road salt based on the current time
+    # Extract dynamic road salt based on the current time (in kg)
     salt_input <- salt_df$salt_input[which.min(abs(salt_df$time - time))]
-    # Update alpha parameter based dynamic salt input
-    alpha <- salt_input
+    salt_input = salt_input * 2
+    # # Update alpha parameter based dynamic salt input
+    # alpha <- salt_input
     
     # Assuming 82% of the salt applied goes into the watershed
     # Rate of change in Cl- in watershed, kg y-1
     # dSW <- 0.82*(alpha * roads_m) - p * phi * SW
     
     # Create variable that accounts for 0.7 is impervious surface, and ET of 0.5
-    cl_d = 0.2 #0.345 #chloride directly into the lake 
-    r_d = 0.05 #precipitation directly into the lake
+    # cl_d = 0.3 #0.345 #chloride directly into the lake 
+    # r_d = 0.1 #runoff directly into the lake
 
-    usep = p*(1 - r_d) - 0.627
+    usep = p*(1 - r_d)
     usep <- ifelse(usep < 0, 0, usep)
-    dSW <- (1-cl_d)*(alpha * roads_m) - usep * phi * SW
+    
+    dSW <- (1-cl_d)*(salt_input) - usep * phi * SW
     
     # Assuming 18% of the salt applied goes directly into the lake 
     # Rate of change in Cl- in lake, kg y-1
     # dSL <- (0.18 * alpha * roads_m) + (p * phi * SW) - p * A * (1/V) * SL
-    dSL <- (cl_d * alpha * roads_m) + (usep * phi * SW) - (usep + p*r_d) * A * (1/V) * SL
+    dSL <- (cl_d * salt_input) + (usep * phi * SW) - (usep + p*r_d) * A * (1/V) * SL
     
     # Return the rates of change
     return(list(c(dSW, dSL)))
@@ -86,45 +88,51 @@ dSalt <- function(time, state, pars, p_df, salt_df) {
 }
 
 # Dataframes for model input for p and salt 
-p_df = ET_Precip %>% 
+p_df = ET_Precip %>% ungroup() |> 
+  filter(sampledate >= as.Date('1963-07-01')) |> 
   mutate(time = row_number()) %>% 
   select(time, p = runoff)
 
-salt_df = roadSalt %>% 
+salt_df = saltuse %>%  ungroup() |> 
   mutate(time = row_number()) %>% 
-  select(time, salt_input = salt_kg_m_2)
+  select(time, salt_input = monthlyCl_kg_m)
 
-# Gather parameters
-volume = 3677400
+#### Gather parameters #### 
+# Lake areas (V)
+wingra.volume = as.numeric(st_area(yaharaLakes |> filter(NAME == 'Lake Wingra')) * 0.092903 * 2.7)
+# Watershed areas (A)
+wingra.area = as.numeric(st_area(wingraCat)* 0.092903)
+# Road meters
+wingra.roads = sum(as.numeric(st_length(wingraRoads))) * 0.3048 # convert survey foot to meters
+
 #times = 1:63
-times = 1:63
-inits = c(SW = 0.5e7, SL=51483.6) # Starting values in 1960 (estimates)
-pars <- c(phi = 0.13, roads_m = 115486.53, A = 19826594, V = volume) # remove 1/3 of watershed that drains to Wingra Creek?
+times = 1:737
+inits = c(SW = 0.5e6, SL=51483.6) # Starting values in 1960 (estimates)
+pars <- c(cl_d = 0.3, r_d = 0.1, phi = 0.2, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
+pars <- c(cl_d = 0.3, r_d = 0.1, phi = 0.35, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
+
 
 # Run model from 1960 to 2024
 ss.1960 <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df) |> 
   as_tibble() |> mutate_all(list(as.numeric)) |> 
-  mutate(scenario = 'alpha = 5') %>% 
-  mutate(CL = (SL/volume)*1000) |> 
-  mutate(year = time + 1961)
-
+  mutate(CL = (SL/as.numeric(wingra.volume))*1000) |> 
+  mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
 
 # Calculate RMSE and r^2 between real and modeled chloride
-comparison_data <- merge(annualCl, ss.1960, by = "year", suffixes = c(".actual", ".modeled"))
-rmse.real.model = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2))
+comparison_data <- merge(monthlyCl |> filter(Lake == 'Wingra'), ss.1960, suffixes = c(".actual", ".modeled"))
+rmse.real.model = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2, na.rm = T))
 r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
 
 # RMSE relationship between observed and modeled chloride with a rolling chloride line 
 ggplot(ss.1960) +
-  geom_point(data = allLakes |> filter(Lake == 'Wingra'), aes(x = year(Date), y = Chloride.mgL, color = "Observed Chloride"),
-             shape = 20, stroke = 0.2, size = 0.4) +
-  geom_path(aes(x = year, y = CL, color = "Modeled Chloride"), linetype = 1, linewidth = 0.5) + # model output
-  geom_point(aes(x = year, y = CL, color = "Modeled Chloride")) + # model output
-  geom_path(data = annualCl, aes(x = year, y = Chloride.mgL, color = "Summer Annual Chloride"), linetype = 1, linewidth = 0.5) +
+  geom_point(data = monthlyCl |> filter(Lake == 'Wingra'), aes(x = sampledate, y = Chloride.mgL, color = "Observed Chloride"),
+             shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
+  geom_path(aes(x = sampledate, y = CL, color = "Modeled Chloride"), linetype = 1, linewidth = 0.5) + # model output
+  geom_point(aes(x = sampledate, y = CL, color = "Modeled Chloride")) + # model output
   ylab("Chloride"~(mg~Cl^"-"~L^-1)) +
   xlab('Year') + 
-  xlim(1960, 2024) +
-  annotate("text", x = Inf, y = Inf, label = paste("RMSE =", round(rmse.real.model, 2)), 
+  # xlim(1960, 2024) +
+  annotate("text", x = as.Date('2000-01-01'), y = Inf, label = paste("RMSE =", round(rmse.real.model, 2)),
            hjust = 1.1, vjust = 1.5, size = 4, fontface = "bold") +  # Display RMSE on the plot
   scale_color_manual(values = c("Observed Chloride" = "grey50", 
                                 "Modeled Chloride" = "black", 

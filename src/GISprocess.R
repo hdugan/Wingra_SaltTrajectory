@@ -2,6 +2,8 @@
 library(sf)
 
 daneroads = st_read('GISdata/DANE_ROADS_ROW_2024.gdb/', layer = 'DANE_ROADS_2024')
+table(daneroads$RdCode)
+
 # st_write(daneroads, 'GISdata/daneroads.shp')
 yaharaLakes = st_read('GISdata/YaharaLakes/YaharaLakes_DaneCty.shp')
 
@@ -46,3 +48,80 @@ ggplot(wingraRoads) +
 sum(as.numeric(st_length(wingraRoads))) * 0.3048 # convert survey foot to meters
 sum(as.numeric(st_length(mendotaRoads))) * 0.3048 # convert survey foot to meters
 sum(as.numeric(st_length(mononaRoads2))) * 0.3048 # convert survey foot to meters
+
+# Get city/county boundaries
+library(tigris)
+library(sf)
+
+# Get the county boundaries for Wisconsin
+wi_counties <- counties(state = "WI", cb = TRUE, class = "sf")
+# Filter for Dane County
+dane_county <- wi_counties[wi_counties$NAME == "Dane", ]
+# Plot to verify
+plot(st_geometry(dane_county), main = "Dane County, WI")
+
+# load madison boundary
+madison = st_read('GISdata/Madison/City_Limit.shp')
+dane = st_transform(dane_county, st_crs(madison))
+
+################ LAKE MENDOTA ################ 
+Area of Madison within Lake Mendota catchment
+# Find the intersection (overlapping area)
+intersection <- st_intersection(madison, mendotaCat)
+# Calculate the area of Shapefile 1
+area_shp1 <- st_area(madison)
+# Calculate the area of the intersection
+area_intersection <- st_area(intersection)
+# Compute the percentage of Shapefile 1 that falls within Shapefile 2
+percent_inside_madison <- (sum(area_intersection) / sum(area_shp1)) * 100
+
+# Area of Dane County within Lake Mendota catchment
+intersection <- st_intersection(dane, mendotaCat)
+# Calculate the area of Shapefile 1
+area_shp1 <- st_area(dane)
+# Calculate the area of the intersection
+area_intersection <- st_area(intersection)
+# Compute the percentage of Shapefile 1 that falls within Shapefile 2
+percent_inside_dane <- (sum(area_intersection) / sum(area_shp1)) * 100
+
+# Area of Dane County within Lake Mendota catchment
+daneHighways = daneroads |> filter(RdCode %in% c('County Highway','Interstate Highway','State Highway','US Highway'))
+intersection <- st_intersection(daneHighways, mendotaCat)
+intersectionRoads = sum(st_length(intersection))/sum(st_length(daneHighways))
+
+# For Dane county: Road intersection says 16.5% and area intersection says 15%, so very close via both methods 
+ggplot(dane) +
+  geom_sf() +
+  geom_sf(data = madison) +
+  geom_sf(data = mendotaCat, fill = NA, color = 'blue')
+
+################ LAKE WINGRA ################ 
+Area of Madison within Lake Wingra catchment
+# Find the intersection (overlapping area)
+intersection <- st_intersection(madison, wingraCat)
+# Calculate the area of Shapefile 1
+area_shp1 <- st_area(madison)
+# Calculate the area of the intersection
+area_intersection <- st_area(intersection)
+# Compute the percentage of Shapefile 1 that falls within Shapefile 2 = #8.66
+percent_inside_madison <- (sum(area_intersection) / sum(area_shp1)) * 100
+
+# Area of Dane County within Lake Wingra catchment
+intersection <- st_intersection(dane, wingraCat)
+# Calculate the area of Shapefile 1
+area_shp1 <- st_area(dane)
+# Calculate the area of the intersection
+area_intersection <- st_area(intersection)
+# Compute the percentage of Shapefile 1 that falls within Shapefile 2 = #0.61
+percent_inside_dane <- (sum(area_intersection) / sum(area_shp1)) * 100
+
+# Area of Dane County within Lake Mendota catchment
+daneHighways = daneroads |> filter(RdCode %in% c('County Highway','Interstate Highway','State Highway','US Highway'))
+intersection <- st_intersection(daneHighways, mendotaCat)
+intersectionRoads = sum(st_length(intersection))/sum(st_length(daneHighways))
+
+# For Dane county: Road intersection says 16.5% and area intersection says 15%, so very close via both methods 
+ggplot(dane) +
+  geom_sf() +
+  geom_sf(data = madison) +
+  geom_sf(data = mendotaCat, fill = NA, color = 'blue')
