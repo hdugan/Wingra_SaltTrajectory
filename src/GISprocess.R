@@ -1,24 +1,28 @@
 # Read in and process GIS data
 library(sf)
 
-daneroads = st_read('GISdata/DANE_ROADS_ROW_2024.gdb/', layer = 'DANE_ROADS_2024')
-table(daneroads$RdCode)
-
-# st_write(daneroads, 'GISdata/daneroads.shp')
-yaharaLakes = st_read('GISdata/YaharaLakes/YaharaLakes_DaneCty.shp')
-
+# Load watersheds
 wingraWS = st_read('GISdata/YaharaBasins/Wingra_Basin.shp')
 mendotaWS = st_read('GISdata/YaharaBasins/Mendota_Basin.shp')
 mononaWS = st_read('GISdata/YaharaBasins/Monona_Basin.shp')
 subbasinsWS = st_read('GISdata/YaharaBasins/Yahara_subBasins.shp')
 mononaWS2 = subbasinsWS |> filter(BasinName %in% c('Starkweather Creek', 'Lake Monona')) |> 
   st_union()
+yaharaLakes = st_read('GISdata/YaharaLakes/YaharaLakes_DaneCty.shp')
 
 # Ensure both shapefiles are in the same CRS (Coordinate Reference System)
 wingraWS <- st_transform(wingraWS, st_crs(yaharaLakes))
 mendotaWS <- st_transform(mendotaWS, st_crs(yaharaLakes))
 mononaWS <- st_transform(mononaWS, st_crs(yaharaLakes))
 mononaWS2 <- st_transform(mononaWS2, st_crs(yaharaLakes))
+subbasinsWS <- st_transform(subbasinsWS, st_crs(yaharaLakes))
+
+# Load big road database
+# daneroads = st_read('GISdata/DANE_ROADS_ROW_2024.gdb/', layer = 'DANE_ROADS_2024')
+# write dane county shapefile that intersections yahara basins 
+# daneRdIntersect = st_intersection(st_transform(daneroads, st_crs(yaharaLakes)), subbasinsWS)
+# st_write(daneRdIntersect |> select(RdCode, MuniName_L), 'GISdata/DaneCounty_Roads/daneroads.shp', delete_dsn = TRUE)
+daneroads = st_read('GISdata/DaneCounty_Roads/daneroads.shp')
 
 # Perform the difference operation: subtract shapefile1 from shapefile2
 wingraCat <- st_difference(wingraWS, yaharaLakes |> filter(NAME == 'Lake Wingra'))
