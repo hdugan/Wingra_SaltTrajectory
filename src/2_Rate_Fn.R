@@ -56,11 +56,11 @@ dSalt_OG <- function(time, state, pars, p_df, salt_df) {
 dSalt <- function(time, state, pars, p_df, salt_df) {
   with(as.list(c(state, pars)), {
     # Extract the dynamic p based on the current time
-    p <- p_df$p[which.min(abs(p_df$time - time))]
+    p <- p_df$runoff[which.min(abs(p_df$time - time))]
     
     # Extract dynamic road salt based on the current time (in kg)
     salt_input <- salt_df$salt_input[which.min(abs(salt_df$time - time))]
-    salt_input = salt_input * 2
+    salt_input = salt_input
     # # Update alpha parameter based dynamic salt input
     # alpha <- salt_input
     
@@ -91,7 +91,7 @@ dSalt <- function(time, state, pars, p_df, salt_df) {
 p_df = ET_Precip %>% ungroup() |> 
   filter(sampledate >= as.Date('1963-07-01')) |> 
   mutate(time = row_number()) %>% 
-  select(time, p = runoff)
+  select(time, runoff)
 
 salt_df = saltuse %>%  ungroup() |> 
   mutate(time = row_number()) %>% 
@@ -107,9 +107,9 @@ wingra.roads = sum(as.numeric(st_length(wingraRoads))) * 0.3048 # convert survey
 
 #times = 1:63
 times = 1:737
-inits = c(SW = 0.5e6, SL=51483.6) # Starting values in 1960 (estimates)
-pars <- c(cl_d = 0.3, r_d = 0.1, phi = 0.2, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
-pars <- c(cl_d = 0.3, r_d = 0.1, phi = 0.35, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
+inits = c(SW = 2e6, SL=51483.6) # Starting values in 1963 (estimate for watershed)
+pars <- c(cl_d = 0.17, r_d = 0.2, phi = 0.2, A = wingra.area, V = wingra.volume) 
+# pars <- c(cl_d = 0.25, r_d = 0.2, phi = 0.18, A = wingra.area, V = wingra.volume) 
 
 
 # Run model from 1960 to 2024
@@ -119,28 +119,13 @@ ss.1960 <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df) 
   mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
 
 # Calculate RMSE and r^2 between real and modeled chloride
-comparison_data <- merge(monthlyCl |> filter(Lake == 'Wingra'), ss.1960, suffixes = c(".actual", ".modeled"))
-rmse.real.model = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2, na.rm = T))
-r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
+# Join to observed values 
+comparison_data = ss.1960 |> left_join(monthlyCl) |>  
+  mutate(Chloride.mgL_6m = rollmean(Chloride.mgL, k = 4, fill = NA, align = "right")) |> 
+  mutate(CL_6m = rollmean(CL, k = 4, fill = NA, align = "right")) |> 
+  mutate(resids = abs(Chloride.mgL_6m - CL_6m)) 
 
-# RMSE relationship between observed and modeled chloride with a rolling chloride line 
-ggplot(ss.1960) +
-  geom_point(data = monthlyCl |> filter(Lake == 'Wingra'), aes(x = sampledate, y = Chloride.mgL, color = "Observed Chloride"),
-             shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
-  geom_path(aes(x = sampledate, y = CL, color = "Modeled Chloride"), linetype = 1, linewidth = 0.5) + # model output
-  geom_point(aes(x = sampledate, y = CL, color = "Modeled Chloride")) + # model output
-  ylab("Chloride"~(mg~Cl^"-"~L^-1)) +
-  xlab('Year') + 
-  # xlim(1960, 2024) +
-  annotate("text", x = as.Date('2000-01-01'), y = Inf, label = paste("RMSE =", round(rmse.real.model, 2)),
-           hjust = 1.1, vjust = 1.5, size = 4, fontface = "bold") +  # Display RMSE on the plot
-  scale_color_manual(values = c("Observed Chloride" = "grey50", 
-                                "Modeled Chloride" = "black", 
-                                "Summer Annual Chloride" = "limegreen")) +
-  theme_bw(base_size = 10) +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size =8),
-        legend.position = c(0.15,0.80),
-        legend.key.height = unit(0.12,'cm'),
-        plot.title = element_text(hjust = 0.5))
+rmse.monthly = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2, na.rm = T))
+rmse.6month = sqrt(mean((comparison_data$Chloride.mgL_6m - comparison_data$CL_6m)^2, na.rm = T))
+# r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
 

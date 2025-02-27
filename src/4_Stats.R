@@ -1,3 +1,58 @@
+# Scenario based analysis
+scenario_data <- bind_rows(
+  ss.future.0 %>% mutate(scenario = "100% Reduction") |> mutate(reduction = '100%'),
+  ss.future.25 %>% mutate(scenario = "75% Reduction") |> mutate(reduction = '75%'),
+  ss.future.50 %>% mutate(scenario = "50% Reduction") |> mutate(reduction = '50%'),
+  ss.future.75 %>% mutate(scenario = "25% Reduction") |> mutate(reduction = '25%'),
+  ss.future.100 %>% mutate(scenario = "0% Reduction") |> mutate(reduction = '0%')) |> 
+  mutate(scenario = factor(scenario, levels = c("0% Reduction", "25% Reduction", "50% Reduction", "75% Reduction", "100% Reduction"))) |> 
+  mutate(reduction = factor(reduction, levels = c("0%", "25%", "50%", "75%", "100%")))
+
+
+###### Annual means ######
+scenario_data_annaul = scenario_data |> 
+  mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
+  group_by(scenario, wateryear) |> 
+  summarise(CL.mean = mean(CL.mean), CL.max = mean(CL.max), CL.min = mean(CL.min))
+  
+annualCl = monthlyCl |> 
+  mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
+  group_by(wateryear) |> 
+  summarise(Chloride.mgL = mean(Chloride.mgL, na.rm = T))
+
+annual.1960 = ss.1960 |> 
+  mutate(wateryear = if_else(month(sampledate) >= 10, year(sampledate) + 1, year(sampledate))) |> 
+  group_by(wateryear) |> 
+  summarise(CL = mean(CL, na.rm = T))
+
+###### High vs. Low snow years #######
+# Creat annual met based on water year
+yearMet = arbMet |> 
+  mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
+  mutate(summerRain = if_else(!month %in% c(11,12,1,2,3,4), precip_raw_m, 0)) |> 
+  group_by(wateryear) |> 
+  summarise(totalSnow = sum(snow_raw_m), totalPrecip = sum(precip_raw_m), summerPrecip = sum(summerRain)) |> 
+  filter(wateryear != 2025) |> 
+  filter(wateryear != 1963)
+
+# Define 95% and 5% percentiles for low and high precip and snow
+precip.05 <- round(quantile(yearMet$totalPrecip, 0.10),2)
+precip.95 <- round(quantile(yearMet$totalPrecip, 0.90),2)
+snow.05 <- round(quantile(yearMet$totalSnow, 0.10, na.rm = TRUE),2)
+snow.95 <- round(quantile(yearMet$totalSnow, 0.90, na.rm = TRUE),2)
+
+precip.snow <- yearMet %>%
+  mutate(Rain = case_when(
+    totalPrecip <= precip.05 ~ "Low Precip",
+    totalPrecip >= precip.95 ~ "High Precip",
+    TRUE ~ "Normal Precip")) %>%
+  mutate(Snow = case_when(
+    totalSnow <= snow.05 ~ "Low Snow",
+    totalSnow >= snow.95 ~ "High Snow",
+    TRUE ~ "Normal Snow")) %>%
+  left_join(annualCl, by = "wateryear")
+
+
 ################# Statistics ################# 
 times = 1:63
 inits = c(SW = 0.5e7, SL=51483.6) # Starting values in 1962 (estimates)
@@ -55,34 +110,8 @@ r.sq4 = round(summary(lm(yearMet$precip_raw_m~yearMet$year))$r.squared, 2)
 summary(lm(yearMet$snow_raw_m~yearMet$year))
 summary(lm(yearMet$precip_raw_m~yearMet$year))
 
-# Scenario based analysis
-scenario_data <- bind_rows(
-  ss.future %>% mutate(scenario = "No Reduction"),
-  ss.future.25 %>% mutate(scenario = "25% Reduction"),
-  ss.future.50 %>% mutate(scenario = "50% Reduction"),
-  ss.future.75 %>% mutate(scenario = "75% Reduction"), 
-  ss.future.100 %>% mutate(scenario = "100% Reduction"))
 
-scenario_data$scenario <- factor(scenario_data$scenario, 
-                                 levels = c("No Reduction", "25% Reduction", "50% Reduction", "75% Reduction", "100% Reduction"))
-
-# Define 95% and 5% percentiles for low and high precip and snow
-precip.05 <- round(quantile(yearMet$precip_raw_m, 0.05),2)
-precip.95 <- round(quantile(yearMet$precip_raw_m, 0.95),2)
-snow.05 <- round(quantile(yearMet$snow_raw_m, 0.05, na.rm = TRUE),2)
-snow.95 <- round(quantile(yearMet$snow_raw_m, 0.95, na.rm = TRUE),2)
-
-# Combine outliers into one df, labeling 95% as high years and 5% as low
-precip.snow <- yearMet%>%
-  mutate(Rain = case_when(
-    precip_raw_m <= precip.05 ~ "Low Precip",
-    precip_raw_m >= precip.95 ~ "High Precip",
-    TRUE ~ "Normal Precip")) %>%
-  mutate(Snow = case_when(
-    snow_raw_m <= snow.05 ~ "Low Snow",
-    snow_raw_m >= snow.95 ~ "High Snow",
-    TRUE ~ "Normal Snow")) %>%
-  left_join(annualCl, by = "year") 
+ 
 
 # Define chloride, precip, and snow ranges and combine them
 chloride_range <- c(4.12000, 125.00667)

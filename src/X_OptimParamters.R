@@ -4,8 +4,9 @@ runoffpars.function <- function(pars) {
   
   # Parameters to be optimized
   cl_d = pars[1]
-  r_d = pars[2]
-  usephi = pars[3]
+  # r_d = pars[2]
+  r_d = 0.2
+  usephi = pars[2]
   
   # Model function 
   dSalt <- function(time, state, pars, p_df, salt_df) {
@@ -15,7 +16,7 @@ runoffpars.function <- function(pars) {
       
       # Extract dynamic road salt based on the current time
       salt_input <- salt_df$salt_input[which.min(abs(salt_df$time - time))]
-      salt_input = salt_input *2
+      salt_input = salt_input
       
       usep = p*(1 - r_d)
       usep <- ifelse(usep < 0, 0, usep)
@@ -33,7 +34,7 @@ runoffpars.function <- function(pars) {
   
   #Gather parameters
   times = 1:737
-  inits = c(SW = 0.5e6, SL=51483.6) # Starting values in 1960 (estimates)
+  inits = c(SW = 1e6, SL=51483.6) # Starting values in 1960 (estimates)
   inputpars <- c(phi = usephi, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
   
   # Run model
@@ -44,15 +45,16 @@ runoffpars.function <- function(pars) {
   
   # Join to observed values 
   combo = ss.1960 |> left_join(monthlyCl) |>  
-    mutate(Chloride.mgL_12m = rollmean(Chloride.mgL, k = 6, fill = NA, align = "right")) |> 
-    mutate(CL_12m = rollmean(CL, k = 6, fill = NA, align = "right")) |> 
-    mutate(resids = abs(Chloride.mgL_12m - CL_12m)) 
+    mutate(Chloride.mgL_6m = rollapply(Chloride.mgL, width = 6, FUN=function(x) mean(x, na.rm=TRUE),
+                                        partial = TRUE, fill = NA, align = "right")) |> 
+    mutate(CL_6m = rollmean(CL, k = 6, fill = NA, align = "right")) |> 
+    mutate(resids = abs(Chloride.mgL_6m - CL_6m)) 
   
   # Diagnostic plotting 
   # p1 = ggplot(combo) +
   #   geom_path(aes(x= sampledate, y = Chloride.mgL)) +
   #   geom_point(aes(x= sampledate, y = Chloride.mgL)) +
-  #   geom_path(aes(x= sampledate, y = CL), col = 'red')
+  #   geom_path(aes(x= sampledate, y = CL), col = 'redx')
   # print(p1)
   
   combo = combo |>
@@ -65,14 +67,11 @@ runoffpars.function <- function(pars) {
   
 }
 
-runoffpars.function(pars = c(0.3,0.1,0.2))
+runoffpars.function(pars = c(0.3,0.1,0.35))
+runoffpars.function(pars = c(0.25,0.1,0.35))
 
 
-# optim(par = c(0.3,0.1,0.2), fn = runoffpars.function, method = 'Nelder-Mead')
-optim(par = c(0.3,0.1,0.2), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 50))$par
-
-
-
-
+optim(par = c(0.25,0.1,0.35), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 20))$par
+optim(par = c(0.25,0.18), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 50))$par
 # optim(par = c(0.18,0.3), fn = runoffpars.function, method = 'SANN', control = list(maxit = 1000))$par
 

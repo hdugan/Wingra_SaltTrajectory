@@ -65,7 +65,7 @@ madison = st_read('GISdata/Madison/City_Limit.shp')
 dane = st_transform(dane_county, st_crs(madison))
 
 ################ LAKE MENDOTA ################ 
-Area of Madison within Lake Mendota catchment
+# Area of Madison within Lake Mendota catchment
 # Find the intersection (overlapping area)
 intersection <- st_intersection(madison, mendotaCat)
 # Calculate the area of Shapefile 1
@@ -96,7 +96,7 @@ ggplot(dane) +
   geom_sf(data = mendotaCat, fill = NA, color = 'blue')
 
 ################ LAKE WINGRA ################ 
-Area of Madison within Lake Wingra catchment
+# Area of Madison within Lake Wingra catchment
 # Find the intersection (overlapping area)
 intersection <- st_intersection(madison, wingraCat)
 # Calculate the area of Shapefile 1
