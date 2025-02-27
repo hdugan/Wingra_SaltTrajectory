@@ -12,7 +12,7 @@ runoffpars.function <- function(pars) {
   dSalt <- function(time, state, pars, p_df, salt_df) {
     with(as.list(c(state, pars)), {
       # Extract the dynamic p based on the current time
-      p <- p_df$p[which.min(abs(p_df$time - time))]
+      p <- p_df$runoff[which.min(abs(p_df$time - time))]
       
       # Extract dynamic road salt based on the current time
       salt_input <- salt_df$salt_input[which.min(abs(salt_df$time - time))]

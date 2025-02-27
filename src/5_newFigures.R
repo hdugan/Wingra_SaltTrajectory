@@ -110,7 +110,7 @@ ggsave('Figures_new/FutureTS_annual.png', width = 6.5, height = 4, dpi = 500)
 # Relationship between high/low rain/snow
 scalefactor = 80
 
-ggplot(precip.snow, aes(x = year)) + 
+ggplot(precip.snow) + 
   geom_point(data = annualCl, aes(x = wateryear, y = Chloride.mgL)) +
   geom_path(data = annualCl, aes(x = wateryear, y = Chloride.mgL)) +
   geom_point(data = precip.snow |> filter(Snow == 'Low Snow'), aes(x = wateryear, y = totalSnow*scalefactor, shape = Snow),
@@ -137,3 +137,39 @@ ggplot(precip.snow, aes(x = year)) +
         legend.key.height = unit(0.4, 'cm'),
         plot.title = element_text(hjust = 0.5))
 ggsave("Figures_new/PrecipYears.png", width = 3, height = 3, units = "in", dpi = 500, bg = 'white')
+
+##########################################################################################
+# Plot rain and snow timeseries 
+p.rain = ggplot(yearMet) +
+  geom_col(aes(x = wateryear, y = totalPrecip), fill = '#0c5575') +
+  ylab('Total Precipitaiton (m)') +
+  annotate("text", x = -Inf, y = Inf, label = '💧', size = 8, vjust = 1.5, hjust = -0.7) +
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank())
+
+p.snow = ggplot(yearMet) +
+  geom_col(aes(x = wateryear, y = totalSnow), fill = '#a9d7eb') +
+  ylab('Total Snow (m)') +
+  annotate("text", x = -Inf, y = Inf, label = '❄️', size = 8, vjust = 1.5, hjust = -0.7) +
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank())
+
+p.rain/p.snow
+ggsave("Figures_new/metTS.png", width = 6, height = 3, units = "in", dpi = 500, bg = 'white')
+
+# # Compare to Dane County airport for gut check 
+# p.rain2 = ggplot(airport.yearMet) +
+#   geom_col(aes(x = wateryear, y = totalPrecip), fill = '#0c5575') +
+#   ylab('Total Precipitaiton (m)') +
+#   theme_bw(base_size = 10) +
+#   theme(axis.title.x = element_blank())
+# 
+# p.snow2 = ggplot(airport.yearMet) +
+#   geom_col(aes(x = wateryear, y = totalSnow), fill = '#a9d7eb') +
+#   ylab('Total Snow (m)') +
+#   theme_bw(base_size = 10) +
+#   theme(axis.title.x = element_blank())
+# 
+# (p.rain + p.snow) / (p.rain2 + p.snow2)
+
+  

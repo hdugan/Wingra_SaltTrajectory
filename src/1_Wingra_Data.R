@@ -24,6 +24,20 @@ rawmet = read_csv('InputData/Climate/3944435.csv') |>
 ggplot(rawmet) +
   geom_path(aes(x = DATE, y = SNOW, col = STATION))
 
+# Data from Dane County airport 
+# Load most recent 2024 data from Dane County airport
+met2024 = read_csv('InputData/Climate/3857041.csv') |> 
+  mutate(precip_raw_mm = PRCP, snow_raw_cm = SNOW/10) |> 
+  rename(sampledate = DATE) |> 
+  mutate(year4 = year(sampledate)) |> 
+  select(year4, sampledate, precip_raw_mm, snow_raw_cm)
+
+# Load core dataset (currently ends Dec 2023)
+airportMet = read_csv('InputData/Climate/ntl20_v13.csv') |> 
+  bind_rows(met2024) |> # bind 2024 data
+  group_by(sampledate) |> 
+  summarise(precip_raw_m = sum(precip_raw_mm, na.rm = T)/1000, snow_raw_m = sum(snow_raw_cm, na.rm = T)/100) |> 
+  filter(sampledate >= as.Date('1962-01-01'))
 
 # Data from arboretum and charmany farms
 arbMet = read_csv('InputData/Climate/3944435.csv') |> 

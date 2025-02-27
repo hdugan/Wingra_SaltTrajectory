@@ -10,7 +10,7 @@ scenario_data <- bind_rows(
 
 
 ###### Annual means ######
-scenario_data_annaul = scenario_data |> 
+scenario_data_annual = scenario_data |> 
   mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
   group_by(scenario, wateryear) |> 
   summarise(CL.mean = mean(CL.mean), CL.max = mean(CL.max), CL.min = mean(CL.min))
@@ -27,11 +27,17 @@ annual.1960 = ss.1960 |>
 
 ###### High vs. Low snow years #######
 # Creat annual met based on water year
+airport.yearMet = airportMet |> 
+  mutate(wateryear = if_else(month(sampledate) >= 10, year(sampledate) + 1, year(sampledate))) |> 
+  group_by(wateryear) |> 
+  summarise(totalSnow = sum(snow_raw_m), totalPrecip = sum(precip_raw_m)) |> 
+  filter(wateryear != 2025) |> 
+  filter(wateryear != 1963)
+
 yearMet = arbMet |> 
   mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
-  mutate(summerRain = if_else(!month %in% c(11,12,1,2,3,4), precip_raw_m, 0)) |> 
   group_by(wateryear) |> 
-  summarise(totalSnow = sum(snow_raw_m), totalPrecip = sum(precip_raw_m), summerPrecip = sum(summerRain)) |> 
+  summarise(totalSnow = sum(snow_raw_m), totalPrecip = sum(precip_raw_m)) |> 
   filter(wateryear != 2025) |> 
   filter(wateryear != 1963)
 
