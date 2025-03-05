@@ -1,14 +1,15 @@
 
 ##########################################################################################
+# Model Fit ####
 # RMSE relationship between observed and modeled chloride with a rolling chloride line 
-ggplot(ss.1960) +
+p.model = ggplot(ss.1960) +
   geom_point(data = monthlyCl, aes(x = sampledate, y = Chloride.mgL),
              shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
   geom_path(aes(x = sampledate, y = CL), linetype = 1, linewidth = 0.5) + # model output
-  geom_point(aes(x = sampledate, y = CL), size = 0.5) + # model output
-  ylab("Chloride"~(mg~Cl^"-"~L^-1)) + 
-  annotate("text", x = as.Date('1990-01-01'), y = Inf, label = paste("RMSE =", round(rmse.monthly, 2)),
-           hjust = 1.1, vjust = 1.5, size = 3, fontface = "bold") +  # Display RMSE on the plot
+  # geom_point(aes(x = sampledate, y = CL), size = 0.5) + # model output
+  ylab("Chloride"~(mg~L^-1)) + 
+  annotate("text", x = as.Date('1940-01-01'), y = Inf, label = paste("RMSE =", round(rmse.monthly, 2)),
+           hjust = 0, vjust = 1.5, size = 3, fontface = "bold") +  # Display RMSE on the plot
   theme_bw(base_size = 10) +
   theme(axis.title.x = element_blank(), 
         legend.text = element_text(size =8),
@@ -16,6 +17,31 @@ ggplot(ss.1960) +
         legend.key.height = unit(0.12,'cm'))
 
 ggsave('Figures_new/ModelOutput.png', width = 6.5, height = 3, dpi = 500)
+
+# RMSE relationship between observed and modeled chloride with a rolling chloride line 
+p.model.2000 = ggplot(df.out.2000) +
+  geom_point(aes(x = sampledate, y = Chloride.mgL),
+             shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
+  geom_path(aes(x = sampledate, y = CL.model), linetype = 1, linewidth = 0.5) + # model output
+  geom_path(aes(x = sampledate, y = CL.precip), color = '#80a8e8') +
+  ylab("Chloride"~(mg~L^-1)) + 
+  annotate("text", x = as.Date('2000-01-01'), y = Inf, label = paste("RMSE =", round(rmse.model.2000, 2)),
+           hjust = 0, vjust = 1.5, size = 3, fontface = "bold") +  # Display RMSE on the plot
+  annotate("text", x = as.Date('2000-01-01'), y = Inf, label = paste("RMSE =", round(rmse.precip.2000, 2)),
+           hjust = 0, vjust = 3.5, size = 3, color = '#80a8e8', fontface = "bold") +  # Display RMSE on the plot
+  xlim(as.Date('2000-01-01'), NA) +
+  ylim(58,NA) +
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank(), 
+        legend.text = element_text(size =8),
+        legend.position = c(0.15,0.80),
+        legend.key.height = unit(0.12,'cm')); p.model.2000
+
+ggsave('Figures_new/ModelOutput_2000.png', width = 6.5, height = 3, dpi = 500)
+
+p.model / p.model.2000 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8), plot.margin = unit(c(0.5,0.5,0.5,0.5), "mm"))
+ggsave('Figures_new/ModelOutput_Combo.png', width = 6.5, height = 3, dpi = 500)
 
 ##########################################################################################
 # R^2 Relationship between observed and modeled chloride 
@@ -34,7 +60,8 @@ ggplot(comparison_data) +
 ggsave('Figures_new/r2.png', width = 3, height = 3, dpi = 500)
 
 ##########################################################################################
-# Violin plot of future road salt reduction scenarios
+# Violin plot ####
+# future road salt reduction scenarios
 blue_shades <- c("#c5d3e0", "#9ecae1", "#4292c6", "#2171b5", "#084594")
 
 p.violin = ggplot(scenario_data) +
@@ -54,6 +81,7 @@ p.violin = ggplot(scenario_data) +
 ggsave('Figures_new/Future_Violin.png', width = 6.5, height = 4, dpi = 500)
 
 ##########################################################################################
+# Reduction scenarios ####
 # Relationship between road salt reduction scenarios (0%, 25%, 50%, 75%, 100%)
 p.futureTS = ggplot(scenario_data) +
   # plot future trajectory
@@ -84,15 +112,15 @@ p.futureTS + p.violin + plot_layout(widths = c(1,0.4)) +
 ggsave('Figures_new/FutureTS_combo.png', width = 6.5, height = 4, dpi = 500)
 
 # Relationship between road salt reduction scenarios (0%, 25%, 50%, 75%, 100%)
-ggplot(scenario_data_annaul) +
+ggplot(scenario_data_annual) +
   # plot future trajectory
-  geom_ribbon(aes(ymin = CL.min, ymax = CL.max, x = year, fill = scenario, group = scenario), alpha = 0.5) +
-  geom_path(aes(x = year, y = CL.mean, group = scenario), linetype = 1, linewidth = 0.3) +
+  geom_ribbon(aes(ymin = CL.min, ymax = CL.max, x = wateryear, fill = scenario, group = scenario), alpha = 0.5) +
+  geom_path(aes(x = wateryear, y = CL.mean, group = scenario), linetype = 1, linewidth = 0.3) +
   # plot historical data
-  geom_point(data = annualCl, aes(x = year, y = Chloride.mgL), color= 'red4',
+  geom_point(data = annualCl, aes(x = wateryear, y = Chloride.mgL), color= 'red4',
              shape = 20, stroke = 0.2, size = 0.8) +
   # plot historical model output 
-  geom_path(data = annual.1960, aes(x = year, y = CL), linetype = 1, linewidth = 0.3) +
+  geom_path(data = annual.1960, aes(x = wateryear, y = CL), linetype = 1, linewidth = 0.3) +
   # geom_path(data = annualCl, aes(x = year, y = Chloride.mgL, color = "Summer Annual Chloride")) +
   scale_color_manual(values = blue_shades) +
   scale_fill_manual(values = blue_shades) +
@@ -107,6 +135,7 @@ ggplot(scenario_data_annaul) +
 ggsave('Figures_new/FutureTS_annual.png', width = 6.5, height = 4, dpi = 500)
 
 ##########################################################################################
+# High/low precip years ####
 # Relationship between high/low rain/snow
 scalefactor = 80
 
@@ -136,21 +165,21 @@ ggplot(precip.snow) +
         legend.position = c(0.25, 0.75),
         legend.key.height = unit(0.4, 'cm'),
         plot.title = element_text(hjust = 0.5))
-ggsave("Figures_new/PrecipYears.png", width = 3, height = 3, units = "in", dpi = 500, bg = 'white')
+ggsave("Figures_new/PrecipYears.png", width = 6, height = 3, units = "in", dpi = 500, bg = 'white')
 
 ##########################################################################################
-# Plot rain and snow timeseries 
-p.rain = ggplot(yearMet) +
+# Rain and snow timeseries ####
+p.rain = ggplot(met.year) +
   geom_col(aes(x = wateryear, y = totalPrecip), fill = '#0c5575') +
-  ylab('Total Precipitaiton (m)') +
-  annotate("text", x = -Inf, y = Inf, label = '💧', size = 8, vjust = 1.5, hjust = -0.7) +
+  ylab('Precip (m)') +
+  xlim(1963, 2025) +
   theme_bw(base_size = 10) +
   theme(axis.title.x = element_blank())
 
-p.snow = ggplot(yearMet) +
+p.snow = ggplot(met.year) +
   geom_col(aes(x = wateryear, y = totalSnow), fill = '#a9d7eb') +
-  ylab('Total Snow (m)') +
-  annotate("text", x = -Inf, y = Inf, label = '❄️', size = 8, vjust = 1.5, hjust = -0.7) +
+  ylab('Snow (m)') +
+  xlim(1963, 2025) +
   theme_bw(base_size = 10) +
   theme(axis.title.x = element_blank())
 
@@ -172,4 +201,51 @@ ggsave("Figures_new/metTS.png", width = 6, height = 3, units = "in", dpi = 500, 
 # 
 # (p.rain + p.snow) / (p.rain2 + p.snow2)
 
-  
+##########################################################################################
+# Plot Road Salt timeseries
+p.roadsalt = roadSalt %>% select(wateryear, privatePublicRatio, TotalSalt_tons, ExtraPrivate_Estimate) %>% 
+  rename(City = TotalSalt_tons, Private = ExtraPrivate_Estimate) %>% 
+  pivot_longer(cols = 3:4, names_to = 'use', values_to = 'tons') %>% 
+  mutate(use = factor(use, levels = c('Private', 'City'))) %>% 
+  ggplot() +
+  geom_col(aes(x = wateryear, y = tons/1e3, fill = use)) +
+  geom_path(aes(x = wateryear, y = privatePublicRatio * 10), linewidth = 0.2, linetype = 2) +
+  geom_point(aes(x = wateryear, y = privatePublicRatio * 10), size = 0.6) +
+  scale_fill_manual(values = c('#dedaad','#c9b900'), labels = c('Private\n(estimate)','City\n(actual)')) +
+  scale_y_continuous(
+    name = expression("Road Salt " ~ (10^3 ~ "tons")), 
+    # name = "Road Salt (kilotons)", 
+    sec.axis = sec_axis(~ . / 10, name = "Private:Public ratio")
+  ) + 
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank(),
+        legend.position = c(0.1,0.75),
+        legend.title = element_blank(),
+        legend.margin = margin(1, 1, 1, 1),  # Reduce margin (top, right, bottom, left)
+        legend.key.size = unit(0.3, 'cm'),
+        legend.box.background = element_rect(colour = "black"));  p.roadsalt
+
+ggsave("Figures_new/roadSalt.png", width = 6, height = 3, units = "in", dpi = 500, bg = 'white')
+
+##########################################################################################
+# Plot chloride timeseries
+p.chloride = ggplot(monthlyCl) +
+  geom_path(aes(x = sampledate, y = Chloride.mgL)) +
+  geom_point(aes(x = sampledate, y = Chloride.mgL), shape = 21, fill = 'lightblue3', stroke = 0.2) +
+  ylab("Chloride"~(mg~L^-1)) + 
+  xlim(as.Date('1963-01-01'), as.Date('2024-12-31')) +
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank())
+
+p.chloride / (p.roadsalt + xlim(1963,2025)) +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8)) 
+
+ggsave("Figures_new/Cl_roadSalt.png", width = 6, height = 4, units = "in", dpi = 500, bg = 'white')
+
+p.chloride /  (p.roadsalt + xlim(1963,2025)) / p.snow / p.rain + plot_layout(heights = c(1,1,0.6, 0.6)) +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8), plot.margin = unit(c(0.5,0.5,0.5,0.5), "mm"))
+
+ggsave("Figures_new/Cl_roadSalt_met.png", width = 6, height = 5.5, units = "in", dpi = 500, bg = 'white')
+

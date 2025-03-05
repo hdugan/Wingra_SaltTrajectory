@@ -1,11 +1,12 @@
 #### #### #### optimize runoff parameters to Lake Wingra  #### #### ####
+library(yardstick)
 
 runoffpars.function <- function(pars) {
   
   # Parameters to be optimized
   cl_d = pars[1]
   # r_d = pars[2]
-  r_d = 0.2
+  r_d = 0.1
   usephi = pars[2]
   
   # Model function 
@@ -34,7 +35,7 @@ runoffpars.function <- function(pars) {
   
   #Gather parameters
   times = 1:737
-  inits = c(SW = 1e6, SL=51483.6) # Starting values in 1960 (estimates)
+  inits = c(SW = 3e6, SL=51484) # Starting values in 1960 (estimates)
   inputpars <- c(phi = usephi, A = wingra.area, V = wingra.volume) # remove 1/3 of watershed that drains to Wingra Creek?
   
   # Run model
@@ -50,20 +51,24 @@ runoffpars.function <- function(pars) {
     mutate(CL_6m = rollmean(CL, k = 6, fill = NA, align = "right")) |> 
     mutate(resids = abs(Chloride.mgL_6m - CL_6m)) 
   
+  # Fit a linear model
+  mase.out = yardstick::mase(combo, Chloride.mgL, CL)
+  return(mase.out$.estimate)
+  
   # Diagnostic plotting 
   # p1 = ggplot(combo) +
   #   geom_path(aes(x= sampledate, y = Chloride.mgL)) +
   #   geom_point(aes(x= sampledate, y = Chloride.mgL)) +
-  #   geom_path(aes(x= sampledate, y = CL), col = 'redx')
+  #   geom_path(aes(x= sampledate, y = CL), col = 'red'); p1
   # print(p1)
   
-  combo = combo |>
-    filter(!is.na(resids))
-  SSE <- sum(combo$resids^2)
-  # lower rmse
-  rmse = sqrt(mean(combo$resids^2))
-  print(rmse)
-  return(rmse)
+  # combo = combo |>
+  #   filter(!is.na(resids))
+  # SSE <- sum(combo$resids^2)
+  # # lower rmse
+  # rmse = sqrt(mean(combo$resids^2))
+  # print(rmse)
+  # return(rmse)
   
 }
 
@@ -72,6 +77,6 @@ runoffpars.function(pars = c(0.25,0.1,0.35))
 
 
 optim(par = c(0.25,0.1,0.35), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 20))$par
-optim(par = c(0.25,0.18), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 50))$par
+optim(par = c(0.2,0.2), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 50))$par
 # optim(par = c(0.18,0.3), fn = runoffpars.function, method = 'SANN', control = list(maxit = 1000))$par
 

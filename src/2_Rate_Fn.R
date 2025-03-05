@@ -107,10 +107,9 @@ wingra.roads = sum(as.numeric(st_length(wingraRoads))) * 0.3048 # convert survey
 
 #times = 1:63
 times = 1:737
-inits = c(SW = 2e6, SL=51483.6) # Starting values in 1963 (estimate for watershed)
-pars <- c(cl_d = 0.17, r_d = 0.2, phi = 0.2, A = wingra.area, V = wingra.volume) 
-# pars <- c(cl_d = 0.25, r_d = 0.2, phi = 0.18, A = wingra.area, V = wingra.volume) 
-
+inits = c(SW = 3e6, SL=51484) # Starting values in 1963 (estimate for watershed)
+# pars <- c(cl_d = 0.17, r_d = 0.25, phi = 0.2, A = wingra.area, V = wingra.volume) 
+pars <- c(cl_d = 0.2, r_d = 0.1, phi = 0.2, A = wingra.area, V = wingra.volume)
 
 # Run model from 1960 to 2024
 ss.1960 <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df) |> 
@@ -120,12 +119,46 @@ ss.1960 <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df) 
 
 # Calculate RMSE and r^2 between real and modeled chloride
 # Join to observed values 
-comparison_data = ss.1960 |> left_join(monthlyCl) |>  
-  mutate(Chloride.mgL_6m = rollmean(Chloride.mgL, k = 4, fill = NA, align = "right")) |> 
-  mutate(CL_6m = rollmean(CL, k = 4, fill = NA, align = "right")) |> 
-  mutate(resids = abs(Chloride.mgL_6m - CL_6m)) 
-
+comparison_data = ss.1960 |> left_join(monthlyCl) 
 rmse.monthly = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2, na.rm = T))
-rmse.6month = sqrt(mean((comparison_data$Chloride.mgL_6m - comparison_data$CL_6m)^2, na.rm = T))
 # r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
+print(rmse.monthly)
 
+############ Run 10-year Means ###############
+# Create 10-year rolling means of Precipitation and Road Salt 
+salt_df_mean = salt_df |> mutate(salt_input = rollapply(salt_input, 5*12, mean, align = 'center', fill = "extend"))
+p_df_mean = p_df |> mutate(runoff = rollapply(runoff, 5*12, mean, align = 'center', fill = "extend"))
+
+# Run model with 10-year rolling means
+ss.mean <- ode(inits,times,dSalt, parms = pars, p_df = p_df_mean, salt_df = salt_df_mean) |> 
+  as_tibble() |> mutate_all(list(as.numeric)) |> 
+  mutate(scenario = 'alpha = 5') %>% 
+  mutate(CL = (SL/wingra.volume)*1000) |> 
+  mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
+
+# Run model with actual precip, 10-year mean of salt
+ss.precip <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df_mean) |> 
+  as_tibble() |> mutate_all(list(as.numeric)) |> 
+  mutate(CL = (SL/wingra.volume)*1000) |> 
+  mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
+
+# Run model with actual salt, 10-year mean of precip
+ss.salt <- ode(inits,times,dSalt, parms = pars, p_df = p_df_mean, salt_df = salt_df) |> 
+  as_tibble() |> mutate_all(list(as.numeric)) |> 
+  mutate(CL = (SL/wingra.volume)*1000) |> 
+  mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
+
+# Calculate RMSE of scenarios
+df.out = data.frame(sampledate = ss.1960$sampledate,
+                    Chloride.mgL = comparison_data$Chloride.mgL, 
+                    CL.model = ss.1960$CL, 
+                    CL.precip = ss.precip$CL, 
+                    CL.salt = ss.salt$CL,
+                    CL.mean = ss.mean$CL)
+
+df.out.2000 = df.out %>% filter(sampledate >= as.Date('2000-01-01'))
+
+rmse.model.2000 = sqrt(mean((df.out.2000$CL.model - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.model)
+rmse.precip.2000 = sqrt(mean((df.out.2000$CL.precip - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.precip)
+rmse.salt.2000 = sqrt(mean((df.out.2000$CL.salt - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.salt)
+rmse.mean.2000 = sqrt(mean((df.out.2000$CL.mean - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.mean)

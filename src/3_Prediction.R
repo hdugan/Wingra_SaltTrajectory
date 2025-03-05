@@ -1,3 +1,6 @@
+library(tidyverse)
+set.seed(12) # set seed for reproducibility
+
 ##################### Prediction Model ######################
 # Here take the actual runoff values, but for the future randomly sample 100 different scenarios 
 # normal distribution with mean and SD taken from actual values
@@ -45,7 +48,8 @@ salt.future = tibble(sampledate = seq.Date(as.Date('2024-12-01'), as.Date('2099-
 roadsalt.future <- function(decrease) {
   salt.future |> 
   rowwise() %>%  # Ensure row-wise operation
-  mutate(salt_input = rnorm(1, mean = mean_monthlyCl_kg_m*decrease, sd = sd_monthlyCl_kg_m*decrease))}
+  mutate(salt_input = rnorm(1, mean = mean_monthlyCl_kg_m*decrease, sd = sd_monthlyCl_kg_m*decrease)) %>% 
+  mutate(salt_input = if_else(salt_input < 0, 0, salt_input))}
 
 salt.future.100 = roadsalt.future(1)
 salt.future.75 = roadsalt.future(0.75)
@@ -53,8 +57,10 @@ salt.future.50 = roadsalt.future(0.50)
 salt.future.25 = roadsalt.future(0.25)
 salt.future.0 = roadsalt.future(0)
 
+ggplot(salt.future.100) + geom_path(aes(x = sampledate, y = salt_input))
+
 #Gather parameters for predicting into the future 
-times = 737:1638
+times = 738:1638
 inits = c(SW = ss.1960 |> slice_tail() |> pull(SW), SL = ss.1960 |> slice_tail() |> pull(SL))
 
 #Solve through time from 2024 to 2160 with current road salt use 

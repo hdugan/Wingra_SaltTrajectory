@@ -93,12 +93,6 @@ daneHighways = daneroads |> filter(RdCode %in% c('County Highway','Interstate Hi
 intersection <- st_intersection(daneHighways, mendotaCat)
 intersectionRoads = sum(st_length(intersection))/sum(st_length(daneHighways))
 
-# For Dane county: Road intersection says 16.5% and area intersection says 15%, so very close via both methods 
-ggplot(dane) +
-  geom_sf() +
-  geom_sf(data = madison) +
-  geom_sf(data = mendotaCat, fill = NA, color = 'blue')
-
 ################ LAKE WINGRA ################ 
 # Area of Madison within Lake Wingra catchment
 # Find the intersection (overlapping area)
@@ -119,13 +113,22 @@ area_intersection <- st_area(intersection)
 # Compute the percentage of Shapefile 1 that falls within Shapefile 2 = #0.61
 percent_inside_dane <- (sum(area_intersection) / sum(area_shp1)) * 100
 
-# Area of Dane County within Lake Mendota catchment
-daneHighways = daneroads |> filter(RdCode %in% c('County Highway','Interstate Highway','State Highway','US Highway'))
-intersection <- st_intersection(daneHighways, mendotaCat)
-intersectionRoads = sum(st_length(intersection))/sum(st_length(daneHighways))
+### Impervious Surface Madison Data ###
+is = st_read('GISdata/Stormwater_Modeling_Impervious_Land_Cover_Type/Stormwater_Modeling_Impervious_Land_Cover_Type.shp')
+table(is$source_a_2)
 
-# For Dane county: Road intersection says 16.5% and area intersection says 15%, so very close via both methods 
-ggplot(dane) +
-  geom_sf() +
-  geom_sf(data = madison) +
-  geom_sf(data = mendotaCat, fill = NA, color = 'blue')
+is_wingra = st_intersection(is, wingraCat)
+is_wingra.paved = is_wingra %>% filter(source_a_2 %in% 
+             c('Driveways', 'Parking', 'Sidewalks')) %>% 
+  st_transform("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
+is_wingra.roads = is_wingra %>% filter(source_a_2 %in% 'Streets') %>% 
+  st_transform("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
+is_wingra.parkinglots = is_wingra %>% filter(source_a_2 %in% 'Parking') %>% 
+  st_transform("+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
+
+# ggplot(is_wingra.paved) +
+#   geom_sf()
+# ggplot(is_wingra.roads) +
+#   geom_sf()
+
+

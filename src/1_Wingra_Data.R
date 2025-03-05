@@ -15,50 +15,17 @@ library(metR)
 source('src/chlorideProcess.R')
 # Load GIS datasets to calculate areas, road network 
 source('src/GISprocess.R')
+# Load map
+source('src/Figure_Map.R')
 
 ################# Data loading and cleaning ################ 
 ### Load climate data
-rawmet = read_csv('InputData/Climate/3944435.csv') |> 
-  mutate(PRCP = if_else(PRCP > 1000, NA, PRCP))
-
-ggplot(rawmet) +
-  geom_path(aes(x = DATE, y = SNOW, col = STATION))
-
-# Data from Dane County airport 
-# Load most recent 2024 data from Dane County airport
-met2024 = read_csv('InputData/Climate/3857041.csv') |> 
-  mutate(precip_raw_mm = PRCP, snow_raw_cm = SNOW/10) |> 
-  rename(sampledate = DATE) |> 
-  mutate(year4 = year(sampledate)) |> 
-  select(year4, sampledate, precip_raw_mm, snow_raw_cm)
-
-# Load core dataset (currently ends Dec 2023)
-airportMet = read_csv('InputData/Climate/ntl20_v13.csv') |> 
-  bind_rows(met2024) |> # bind 2024 data
-  group_by(sampledate) |> 
-  summarise(precip_raw_m = sum(precip_raw_mm, na.rm = T)/1000, snow_raw_m = sum(snow_raw_cm, na.rm = T)/100) |> 
-  filter(sampledate >= as.Date('1962-01-01'))
+source('src/0_LoadMet.R')
 
 # Data from arboretum and charmany farms
-arbMet = read_csv('InputData/Climate/3944435.csv') |> 
-  group_by(DATE) |> 
-  summarise(PRCP = mean(PRCP, na.rm = T), SNOW = mean(SNOW, na.rm = T), 
-            TMAX = mean(TMAX, na.rm = T), TMIN = mean(TMIN, na.rm = T)) |> #Take mean of two stations 
-  mutate(year = year(DATE)) |> mutate(month = month(DATE)) |> 
-  # mutate(year = if_else(month(sampledate) >= 10, year + 1, year)) |> 
-  group_by(year, month) |> 
-  summarise(sampledate = first(DATE), precip_raw_m = sum(PRCP, na.rm = T)/1000, 
-            snow_raw_m = sum(SNOW, na.rm = T)/1000, 
-            days_above_5 = sum(TMAX > 5, na.rm = T)) |> 
-  filter(year >= 1962, year <= 2024)
 
 # ET monthly from open ET monthly ensemble
 openET.wingra = read_csv('InputData/WingraOpenETensemble.csv')
-# ET monthly from open ET monthly ensemble for Mendota
-openET.mendota = read_csv('InputData/mendotaOpenETensemble.csv')
-ggplot(openET.mendota) +
-  geom_path(aes(x = Date, y = et_ensemble_mad)) +
-  geom_path(data = openET.wingra, aes(x = Date, y = et_ensemble_mad), color = 'lightblue')
 
 # Mean ET 0.627 for Wingra
 openETmonth = openET.wingra |> 
@@ -69,10 +36,10 @@ openETmonth = openET.wingra |>
 
 # Subtracting ET from Precipitation to find runoff (assuming ET = 0.75 each year)
 # If runoff was 0 for a year, assume that it is 0.05
-ET_Precip <- arbMet %>% 
+ET_Precip <- met.month %>% 
   ungroup() |> 
   left_join(openETmonth) |> 
-  mutate(frozen = if_else(days_above_5 < 5, TRUE, FALSE)) |> 
+  mutate(frozen = if_else(days_above_0 < 5, TRUE, FALSE)) |> 
   mutate(group = cumsum(lag(frozen, default = FALSE) == FALSE)) |> 
   group_by(group) |> 
   mutate(usePrecip_m = sum(precip_raw_m)) |> 
@@ -80,6 +47,8 @@ ET_Precip <- arbMet %>%
   # mutate(runoff = (precip_raw_m - 0.75)) %>% 
   mutate(runoff = usePrecip_m - et) %>%
   mutate(runoff = if_else(runoff < 0, 0, runoff))
+
+range(ET_Precip$runoff)
 
 ggplot(ET_Precip) + 
   geom_path(aes(x = sampledate, y = runoff))
@@ -105,14 +74,24 @@ ggplot(roadSalt)+
 
 #### For Wingra
 roadSalt = read_csv('InputData/CityMadison_roadsalt_2024update.csv') |> 
-  select(YearStart, wateryear = YearEnd, TotalSalt_tons, DaneCounty, ExtraSalt_Private, ExtraSalt_Private_steady) |>
-  mutate(wingra_tons = (TotalSalt_tons * 0.0866) + (ExtraSalt_Private_steady* 0.0866)) |> 
+  select(YearStart, wateryear = YearEnd, TotalSnow_in, TotalSalt_tons, DaneCounty) |>
+  left_join(met.year) %>% 
+  mutate(ExtraPrivate_Estimate = case_when(wateryear <= 1970 ~ totalSnow * 39.37 * 50,
+                                           wateryear <= 1980 ~ totalSnow * 39.37 * 200,
+                                           wateryear <= 2010 ~ totalSnow * 39.37 * 200,
+                                           wateryear <= 2025 ~ totalSnow * 39.37 * 300)) %>% 
+  # mutate(ExtraPrivate_Estimate = case_when(wateryear <= 1970 ~ TotalSnow_in * 50,
+  #                                          wateryear <= 1980 ~ TotalSnow_in * 150,
+  #                                          wateryear <= 2010 ~ TotalSnow_in * 200,
+  #                                          wateryear <= 2025 ~ TotalSnow_in * 300)) %>% 
+  mutate(wingra_tons = (TotalSalt_tons * 0.0866) + (ExtraPrivate_Estimate* 0.0866)) |> 
+  mutate(privatePublicRatio = ExtraPrivate_Estimate/TotalSalt_tons) %>% 
   mutate(salt_kg = wingra_tons * 907.185) |>
   mutate(cl_kg = salt_kg * 0.610)
 
-saltuse = arbMet |> 
+saltuse = met.month |> 
   left_join(
-    arbMet |> 
+    met.month |> 
       mutate(wateryear = if_else(month(sampledate) >= 10, year + 1, year)) |> 
       group_by(wateryear) |> 
       mutate(totalSnow = sum(snow_raw_m)) |> 
@@ -121,3 +100,7 @@ saltuse = arbMet |>
   left_join(roadSalt |> select(wateryear, cl_kg)) |> 
   mutate(monthlyCl_kg_m = snowPer*cl_kg) |> 
   mutate(monthlyCl_kg_m = if_else(is.na(monthlyCl_kg_m), 0, monthlyCl_kg_m))
+
+# range private:public
+range(roadSalt %>% filter(wateryear >= 1980) %>% pull(privatePublicRatio))
+mean(roadSalt %>% filter(wateryear >= 1980) %>% pull(privatePublicRatio))
