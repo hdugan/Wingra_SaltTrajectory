@@ -94,18 +94,17 @@ sum(st_area(is_wingra.parkinglots))
 parking.kg = 214 * 1000 * 0.453592 # 1000 pounds per acre converted to kg
 parking.kg * 0.610 # convert to kg chloride 
 
-
-################# Statistics ################# 
-### Comparing historical chloride with modeled chloride
-# Calculate RMSE and r^2 between real and modeled chloride
-comparison_data <- merge(annualCl, ss.1960, by = "year", suffixes = c(".actual", ".modeled"))
-rmse.real.model = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2))
-r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
- 
+#### Scenarios ####
 # Calculating the 20 year window average per scenario
 y.2050s <- scenario_data %>% 
   filter(year >= 2050 & year < 2060) %>% 
   group_by(scenario) %>%
-  summarize(avg_concentration = mean(CL.mean, na.rm = TRUE))
+  summarize(avg_concentration = mean(CL.mean, na.rm = TRUE), min(CL.mean, na.rm = T), max(CL.mean, na.rm = T))
 print(y.2050s)
+
+y.2100 <- scenario_data %>% 
+  filter(year >= 2090) %>% 
+  group_by(scenario) %>%
+  summarize(avg_concentration = mean(CL.mean, na.rm = TRUE), min(CL.mean, na.rm = T), max(CL.mean, na.rm = T))
+print(y.2100)
 

@@ -1,5 +1,4 @@
 library(tidyverse)
-set.seed(12) # set seed for reproducibility
 
 ##################### Prediction Model ######################
 # Here take the actual runoff values, but for the future randomly sample 100 different scenarios 
@@ -14,6 +13,7 @@ set.seed(12) # set seed for reproducibility
 #   }) 
 # }
 
+set.seed(12) # set seed for reproducibility
 # As apply statement 
 p.future <- lapply(1:100, function(i) {
   tibble(sampledate = seq.Date(as.Date('2024-12-01'), as.Date('2099-12-01'), by = 'month')) %>%
@@ -26,12 +26,15 @@ p.future <- lapply(1:100, function(i) {
     )
 })
 
-# Check if runoff scenarios look the same
+# Check if runoff scenarios look the same, check timeseries
 bind_rows(p.future) |> group_by(month = month(sampledate)) |> summarise(runoff = mean(runoff)) |> 
   ggplot() + geom_col(aes(month, runoff))
 
 ET_Precip |> group_by(month = month(sampledate)) |> summarise(runoff = mean(runoff)) |> 
   ggplot() + geom_col(aes(month, runoff))
+
+bind_rows(p.future) |> group_by(year = year(sampledate)) |> summarise(runoff = mean(runoff)) |> 
+  ggplot() + geom_col(aes(year, runoff))
 
 # Current mean road salt use 
 meanSaltUse = saltuse |> filter(year >= 2000) |> group_by(month) |> summarise(mean_monthlyCl_kg_m = mean(monthlyCl_kg_m))
@@ -51,13 +54,20 @@ roadsalt.future <- function(decrease) {
   mutate(salt_input = rnorm(1, mean = mean_monthlyCl_kg_m*decrease, sd = sd_monthlyCl_kg_m*decrease)) %>% 
   mutate(salt_input = if_else(salt_input < 0, 0, salt_input))}
 
+set.seed(12) # set seed for reproducibility 
 salt.future.100 = roadsalt.future(1)
-salt.future.75 = roadsalt.future(0.75)
-salt.future.50 = roadsalt.future(0.50)
-salt.future.25 = roadsalt.future(0.25)
-salt.future.0 = roadsalt.future(0)
-
 ggplot(salt.future.100) + geom_path(aes(x = sampledate, y = salt_input))
+
+# salt.future.75 = roadsalt.future(0.75)
+# salt.future.50 = roadsalt.future(0.50)
+# salt.future.25 = roadsalt.future(0.25)
+# salt.future.0 = roadsalt.future(0)
+
+# Decrease useage 
+salt.future.75 = salt.future.100 |> mutate(salt_input = 0.75 * salt_input)
+salt.future.50 = salt.future.100 |> mutate(salt_input = 0.50 * salt_input)
+salt.future.25 = salt.future.100 |> mutate(salt_input = 0.25 * salt_input)
+salt.future.0 = salt.future.100 |> mutate(salt_input = 0 * salt_input)
 
 #Gather parameters for predicting into the future 
 times = 738:1638

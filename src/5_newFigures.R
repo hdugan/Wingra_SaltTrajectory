@@ -1,5 +1,5 @@
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # Model Fit ####
 # RMSE relationship between observed and modeled chloride with a rolling chloride line 
 p.model = ggplot(ss.1960) +
@@ -43,7 +43,7 @@ p.model / p.model.2000 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8), plot.margin = unit(c(0.5,0.5,0.5,0.5), "mm"))
 ggsave('Figures_new/ModelOutput_Combo.png', width = 6.5, height = 3, dpi = 500)
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # R^2 Relationship between observed and modeled chloride 
 r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
 
@@ -59,7 +59,7 @@ ggplot(comparison_data) +
   theme_bw(base_size = 10)
 ggsave('Figures_new/r2.png', width = 3, height = 3, dpi = 500)
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # Violin plot ####
 # future road salt reduction scenarios
 blue_shades <- c("#c5d3e0", "#9ecae1", "#4292c6", "#2171b5", "#084594")
@@ -80,7 +80,7 @@ p.violin = ggplot(scenario_data) +
 
 ggsave('Figures_new/Future_Violin.png', width = 6.5, height = 4, dpi = 500)
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # Reduction scenarios ####
 # Relationship between road salt reduction scenarios (0%, 25%, 50%, 75%, 100%)
 p.futureTS = ggplot(scenario_data) +
@@ -134,7 +134,7 @@ ggplot(scenario_data_annual) +
         plot.title = element_text(hjust = 0.5));
 ggsave('Figures_new/FutureTS_annual.png', width = 6.5, height = 4, dpi = 500)
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # High/low precip years ####
 # Relationship between high/low rain/snow
 scalefactor = 80
@@ -167,7 +167,7 @@ ggplot(precip.snow) +
         plot.title = element_text(hjust = 0.5))
 ggsave("Figures_new/PrecipYears.png", width = 6, height = 3, units = "in", dpi = 500, bg = 'white')
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # Rain and snow timeseries ####
 p.rain = ggplot(met.year) +
   geom_col(aes(x = wateryear, y = totalPrecip), fill = '#0c5575') +
@@ -201,21 +201,21 @@ ggsave("Figures_new/metTS.png", width = 6, height = 3, units = "in", dpi = 500, 
 # 
 # (p.rain + p.snow) / (p.rain2 + p.snow2)
 
-##########################################################################################
-# Plot Road Salt timeseries
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
+##### Plot Road Salt timeseries ####
 p.roadsalt = roadSalt %>% select(wateryear, privatePublicRatio, TotalSalt_tons, ExtraPrivate_Estimate) %>% 
   rename(City = TotalSalt_tons, Private = ExtraPrivate_Estimate) %>% 
   pivot_longer(cols = 3:4, names_to = 'use', values_to = 'tons') %>% 
   mutate(use = factor(use, levels = c('Private', 'City'))) %>% 
   ggplot() +
-  geom_col(aes(x = wateryear, y = tons/1e3, fill = use)) +
-  geom_path(aes(x = wateryear, y = privatePublicRatio * 10), linewidth = 0.2, linetype = 2) +
-  geom_point(aes(x = wateryear, y = privatePublicRatio * 10), size = 0.6) +
+  geom_col(aes(x = wateryear, y = tons * 0.0866, fill = use)) +
+  geom_path(aes(x = wateryear, y = privatePublicRatio * 1000), linewidth = 0.2, linetype = 2) +
+  geom_point(aes(x = wateryear, y = privatePublicRatio * 1000), size = 0.6) +
   scale_fill_manual(values = c('#dedaad','#c9b900'), labels = c('Private\n(estimate)','City\n(actual)')) +
   scale_y_continuous(
-    name = expression("Road Salt " ~ (10^3 ~ "tons")), 
+    name = expression("Road Salt " ~ ("tons")), 
     # name = "Road Salt (kilotons)", 
-    sec.axis = sec_axis(~ . / 10, name = "Private:Public ratio")
+    sec.axis = sec_axis(~ . / 1000, name = "Private:Public ratio")
   ) + 
   theme_bw(base_size = 10) +
   theme(axis.title.x = element_blank(),
@@ -227,7 +227,7 @@ p.roadsalt = roadSalt %>% select(wateryear, privatePublicRatio, TotalSalt_tons, 
 
 ggsave("Figures_new/roadSalt.png", width = 6, height = 3, units = "in", dpi = 500, bg = 'white')
 
-##########################################################################################
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
 # Plot chloride timeseries
 p.chloride = ggplot(monthlyCl) +
   geom_path(aes(x = sampledate, y = Chloride.mgL)) +

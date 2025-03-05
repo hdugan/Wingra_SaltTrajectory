@@ -121,7 +121,7 @@ ss.1960 <- ode(inits,times,dSalt, parms = pars, p_df = p_df, salt_df = salt_df) 
 # Join to observed values 
 comparison_data = ss.1960 |> left_join(monthlyCl) 
 rmse.monthly = sqrt(mean((comparison_data$Chloride.mgL - comparison_data$CL)^2, na.rm = T))
-# r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
+r.sq2 = round(summary(lm(comparison_data$Chloride.mgL~comparison_data$CL))$r.squared, 2)
 print(rmse.monthly)
 
 ############ Run 10-year Means ###############
@@ -148,7 +148,7 @@ ss.salt <- ode(inits,times,dSalt, parms = pars, p_df = p_df_mean, salt_df = salt
   mutate(CL = (SL/wingra.volume)*1000) |> 
   mutate(sampledate = as.Date("1963-06-01") %m+% months(time))
 
-# Calculate RMSE of scenarios
+# Calculate RMSE of scenarios 
 df.out = data.frame(sampledate = ss.1960$sampledate,
                     Chloride.mgL = comparison_data$Chloride.mgL, 
                     CL.model = ss.1960$CL, 
@@ -156,9 +156,14 @@ df.out = data.frame(sampledate = ss.1960$sampledate,
                     CL.salt = ss.salt$CL,
                     CL.mean = ss.mean$CL)
 
+# Filter to post 2000
 df.out.2000 = df.out %>% filter(sampledate >= as.Date('2000-01-01'))
 
-rmse.model.2000 = sqrt(mean((df.out.2000$CL.model - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.model)
-rmse.precip.2000 = sqrt(mean((df.out.2000$CL.precip - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.precip)
-rmse.salt.2000 = sqrt(mean((df.out.2000$CL.salt - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.salt)
-rmse.mean.2000 = sqrt(mean((df.out.2000$CL.mean - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.mean)
+rmse.model.2000 = sqrt(mean((df.out.2000$CL.model - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.model.2000)
+round(summary(lm(df.out.2000$CL.model~df.out.2000$Chloride.mgL))$r.squared, 2)
+
+rmse.precip.2000 = sqrt(mean((df.out.2000$CL.precip - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.precip.2000)
+round(summary(lm(df.out.2000$CL.precip~df.out.2000$Chloride.mgL))$r.squared, 2)
+
+rmse.salt.2000 = sqrt(mean((df.out.2000$CL.salt - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.salt.2000)
+rmse.mean.2000 = sqrt(mean((df.out.2000$CL.mean - df.out.2000$Chloride.mgL)^2, na.rm = T)); print(rmse.mean.2000)
