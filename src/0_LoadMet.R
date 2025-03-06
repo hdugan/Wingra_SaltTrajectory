@@ -41,4 +41,6 @@ met.year = met.month |>
   filter(wateryear != 2025) |> 
   filter(wateryear != 1963)
 
-  
+# ggplot(met.year) +
+#   geom_col(aes(x = wateryear, y = totalPrecip))
+#   

@@ -4,7 +4,7 @@
 # RMSE relationship between observed and modeled chloride with a rolling chloride line 
 p.model = ggplot(ss.1960) +
   geom_point(data = monthlyCl, aes(x = sampledate, y = Chloride.mgL),
-             shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
+             shape = 21, stroke = 0.2, size = 1, fill = '#d9635b') +
   geom_path(aes(x = sampledate, y = CL), linetype = 1, linewidth = 0.5) + # model output
   # geom_point(aes(x = sampledate, y = CL), size = 0.5) + # model output
   ylab("Chloride"~(mg~L^-1)) + 
@@ -21,7 +21,7 @@ ggsave('Figures_new/ModelOutput.png', width = 6.5, height = 3, dpi = 500)
 # RMSE relationship between observed and modeled chloride with a rolling chloride line 
 p.model.2000 = ggplot(df.out.2000) +
   geom_point(aes(x = sampledate, y = Chloride.mgL),
-             shape = 21, stroke = 0.2, size = 1, fill = 'darkred') +
+             shape = 21, stroke = 0.2, size = 1, fill = '#d9635b') +
   geom_path(aes(x = sampledate, y = CL.model), linetype = 1, linewidth = 0.5) + # model output
   geom_path(aes(x = sampledate, y = CL.precip), color = '#80a8e8') +
   ylab("Chloride"~(mg~L^-1)) + 
@@ -69,7 +69,7 @@ p.violin = ggplot(scenario_data) +
   geom_boxplot(aes(x = reduction, y = CL.mean, fill = scenario), width = 0.1, linewidth = 0.3, color = "black", alpha = 0.6, outlier.size = 0.5) + 
   scale_fill_manual(values = blue_shades) +
   theme_bw(base_size = 10) +
-  ylab("Chloride Concentration"~(mg~Cl^"-"~L^-1)) +
+  ylab("Chloride Concentration"~(mg~L^-1)) +
   xlab("Scenario") +
   ylim(0,210) +
   theme(legend.position = "none",
@@ -88,14 +88,14 @@ p.futureTS = ggplot(scenario_data) +
   geom_ribbon(aes(ymin = CL.min, ymax = CL.max, x = sampledate, fill = scenario, group = scenario), alpha = 0.5) +
   geom_path(aes(x = sampledate, y = CL.mean, group = scenario), linetype = 1, linewidth = 0.3) +
   # plot historical data
-  geom_point(data = monthlyCl, aes(x = sampledate, y = Chloride.mgL), color= 'red4',
+  geom_point(data = monthlyCl, aes(x = sampledate, y = Chloride.mgL), color= '#d9635b',
              shape = 20, stroke = 0.2, size = 0.4) +
   # plot historical model output 
   geom_path(data = ss.1960, aes(x = sampledate, y = CL), linetype = 1, linewidth = 0.3) +
   # geom_path(data = annualCl, aes(x = year, y = Chloride.mgL, color = "Summer Annual Chloride")) +
   scale_color_manual(values = blue_shades) +
   scale_fill_manual(values = blue_shades) +
-  ylab("Chloride Concentration"~(mg~Cl^"-"~L^-1)) +
+  ylab("Chloride Concentration"~(mg~L^-1)) +
   xlab('Year') +
   ylim(0,210) + xlim(as.Date('1963-01-01'), NA) +
   theme_bw(base_size = 10) +
@@ -109,7 +109,7 @@ ggsave('Figures_new/FutureTS_monthly.png', width = 6.5, height = 4, dpi = 500)
 p.futureTS + p.violin + plot_layout(widths = c(1,0.4)) +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
-ggsave('Figures_new/FutureTS_combo.png', width = 6.5, height = 4, dpi = 500)
+ggsave('Figures_new/FutureTS_combo.png', width = 6.5, height = 3, dpi = 500)
 
 # Relationship between road salt reduction scenarios (0%, 25%, 50%, 75%, 100%)
 ggplot(scenario_data_annual) +
@@ -231,7 +231,7 @@ ggsave("Figures_new/roadSalt.png", width = 6, height = 3, units = "in", dpi = 50
 # Plot chloride timeseries
 p.chloride = ggplot(monthlyCl) +
   geom_path(aes(x = sampledate, y = Chloride.mgL)) +
-  geom_point(aes(x = sampledate, y = Chloride.mgL), shape = 21, fill = 'lightblue3', stroke = 0.2) +
+  geom_point(aes(x = sampledate, y = Chloride.mgL), shape = 21, fill = '#d9635b', stroke = 0.2) +
   ylab("Chloride"~(mg~L^-1)) + 
   xlim(as.Date('1963-01-01'), as.Date('2024-12-31')) +
   theme_bw(base_size = 10) +
@@ -248,4 +248,45 @@ p.chloride /  (p.roadsalt + xlim(1963,2025)) / p.snow / p.rain + plot_layout(hei
   theme(plot.tag = element_text(size = 8), plot.margin = unit(c(0.5,0.5,0.5,0.5), "mm"))
 
 ggsave("Figures_new/Cl_roadSalt_met.png", width = 6, height = 5.5, units = "in", dpi = 500, bg = 'white')
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
+# Deviation from mean 
+cl.res = annualCl  %>% 
+  mutate(pred = fitted(lm(Chloride.mgL ~ wateryear))) %>%
+  mutate(residuals = Chloride.mgL - pred) %>% 
+  filter(wateryear >= 1963)
+
+# Join chloride and precip residuals 
+res.df = met.year %>% 
+  mutate(pred.precip = fitted(lm(totalPrecip ~ wateryear))) %>%
+  mutate(residuals.precip = totalPrecip - pred.precip) %>% 
+  left_join(cl.res) %>% ungroup() %>% 
+  mutate(p.res = rollapplyr(residuals.precip, 3, mean, align = 'center', fill = NA)) %>% 
+  mutate(cl.res = rollapplyr(residuals, 3, mean, align = 'center', fill = NA, na.rm=T)) %>% 
+  mutate(p.res.scale = scale(p.res), cl.res.scale = scale(cl.res))
+  
+ggplot(res.df) +
+  geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf), fill = '#faf1cf') +
+  geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = -Inf), fill = '#f5e3a2') +
+  
+  geom_hline(aes(yintercept = 0), linetype = 2, linewidth = 0.2) +
+  geom_path(aes(x = wateryear, y = -cl.res.scale)) + 
+  geom_path(aes(x = wateryear, y = p.res.scale), col = 'lightblue4') +
+  annotate('text', x = 1980, y = 2, hjust = 0, vjust = 0, fontface = 2, size = 3,
+           label = '↑ more rain', col = 'lightblue4') +
+  annotate('text', x = 1980, y = 1.7, hjust = 0, vjust = 0, fontface = 2, size = 3, 
+           label = '↓ lower chloride', col = 'black') +
+  annotate('text', x = 1980, y = -2.5, hjust = 0, vjust = 0, fontface = 2, size = 3,
+           , label = '↓ less rain', col = 'lightblue4') +
+  annotate('text', x = 1980, y = -2.2, hjust = 0, vjust = 0, fontface = 2, size = 3,
+           label = '↑ higher chloride', col = 'black') +
+  # geom_vline(aes(xintercept = 1985)) +
+  scale_x_continuous(breaks = c(1970, 1980, 1990, 2000, 2010, 2020)) +
+  ylab('Scaled residuals') +
+  theme_bw(base_size = 10) +
+  theme(axis.title.x = element_blank())
+  
+ggsave("Figures_new/residuals.png", width = 3, height = 3, units = "in", dpi = 500, bg = 'white')
+
+
 

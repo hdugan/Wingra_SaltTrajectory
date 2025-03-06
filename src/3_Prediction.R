@@ -3,16 +3,6 @@ library(tidyverse)
 ##################### Prediction Model ######################
 # Here take the actual runoff values, but for the future randomly sample 100 different scenarios 
 # normal distribution with mean and SD taken from actual values
-# p.future = list()
-# for (i in 1:100) {
-#   p.future[[i]] = tibble(sampledate = seq.Date(as.Date('2024-12-01'), as.Date('2099-12-01'), by = 'month')) |> 
-#                   mutate(time = row_number() + 737, month = month(sampledate))
-#   # Create ET column by sampling from historical ET values for the same month
-#   p.future[[i]]$runoff <- sapply(p.future[[i]]$month, function(m) {
-#     sample(ET_Precip$runoff[month(ET_Precip$sampledate) == m], 1)
-#   }) 
-# }
-
 set.seed(12) # set seed for reproducibility
 # As apply statement 
 p.future <- lapply(1:100, function(i) {
@@ -22,8 +12,19 @@ p.future <- lapply(1:100, function(i) {
       month = month(sampledate),
       runoff = sapply(month, function(m) {
         sample(ET_Precip$runoff[month(ET_Precip$sampledate) == m], 1)
-      })
-    )
+      }))
+})
+
+# Also run scenario where it's 10% wetter overall
+p.future.10wetter <- lapply(1:100, function(i) {
+  tibble(sampledate = seq.Date(as.Date('2024-12-01'), as.Date('2099-12-01'), by = 'month')) %>%
+    mutate(
+      time = row_number() + 737, 
+      month = month(sampledate),
+      runoff = sapply(month, function(m) {
+        sample(ET_Precip$runoff[month(ET_Precip$sampledate) == m], 1)
+      })) %>% 
+    mutate(runoff = 1.10*runoff)
 })
 
 # Check if runoff scenarios look the same, check timeseries
@@ -57,11 +58,6 @@ roadsalt.future <- function(decrease) {
 set.seed(12) # set seed for reproducibility 
 salt.future.100 = roadsalt.future(1)
 ggplot(salt.future.100) + geom_path(aes(x = sampledate, y = salt_input))
-
-# salt.future.75 = roadsalt.future(0.75)
-# salt.future.50 = roadsalt.future(0.50)
-# salt.future.25 = roadsalt.future(0.25)
-# salt.future.0 = roadsalt.future(0)
 
 # Decrease useage 
 salt.future.75 = salt.future.100 |> mutate(salt_input = 0.75 * salt_input)
@@ -135,6 +131,19 @@ ss.list.0 <- lapply(1:100, function(i) {
 })
 # Bind scenarios together with min, mean, and max
 ss.future.0 = bind_rows(ss.list.0, .id = "id") |> 
+  group_by(time, year = year(sampledate), month = month(sampledate)) |> 
+  summarise(sampledate = first(sampledate), CL.mean = mean(CL), CL.max = max(CL), CL.min = min(CL))
+
+#Solve through time from 2024 to 2160 with current road salt use but 10% wetter
+ss.list.100.10wetter <- lapply(1:100, function(i) {
+  ode(inits, times, dSalt, parms = pars, p_df = p.future.10wetter[[i]], salt_df = salt.future.100) |> 
+    as_tibble() |> 
+    mutate(across(everything(), as.numeric)) |>  
+    mutate(CL = (SL / as.numeric(wingra.volume)) * 1000,  # Compute CL
+           sampledate = as.Date("1963-06-01") %m+% months(time))  # Compute sampledate
+})
+# Bind scenarios together with min, mean, and max
+ss.future.100.10wetter = bind_rows(ss.list.100.10wetter, .id = "id") |> 
   group_by(time, year = year(sampledate), month = month(sampledate)) |> 
   summarise(sampledate = first(sampledate), CL.mean = mean(CL), CL.max = max(CL), CL.min = min(CL))
 

@@ -18,6 +18,10 @@ filter(roadSalt %>% ungroup(), TotalSalt_tons == max(TotalSalt_tons, na.rm = T))
 filter(roadSalt %>% filter(wateryear >= 1963) %>% ungroup(), 
        TotalSalt_tons == min(TotalSalt_tons, na.rm = T))
 
+roadSalt %>% filter(wateryear >= 2005 & wateryear < 2015) %>% summarise(mean(TotalSalt_tons))
+roadSalt %>% filter(wateryear >= 2015) %>% summarise(mean(TotalSalt_tons))
+7105/12129
+
 # Climate stats
 filter(met.year %>% ungroup(), totalSnow == max(totalSnow, na.rm = T))
 tail(met.year, n = 10)
@@ -79,7 +83,8 @@ cl.outliers %>%
   arrange(desc(year))
 
 #### Parking lot data #####
-sum(st_area(is_wingra.paved)) # driveways, parking, sidewalks
+sum(st_area(is_wingra.paved)) # driveways, parking, sidewalks ()
+sum(st_area(is_wingra.parkinglots)) # driveways, parking, sidewalks (214 acres)
 sum(st_area(is_wingra.roads))
 sum(st_area(is_wingra.paved))/sum(st_area(is_wingra.roads))
 # 2268453 [m^2] = 560 acres
@@ -93,6 +98,10 @@ sum(st_area(is_wingra.parkinglots))
 # 113 tons per event 
 parking.kg = 214 * 1000 * 0.453592 # 1000 pounds per acre converted to kg
 parking.kg * 0.610 # convert to kg chloride 
+
+parking.tons = 214 * 1000 * 0.0005
+roadSalt$TotalSalt_tons * 0.0866
+roadSalt$ExtraPrivate_Estimate * 0.0866 # 1000 tons a year 
 
 #### Scenarios ####
 # Calculating the 20 year window average per scenario

@@ -17,6 +17,12 @@ ntl = read_csv('InputData/ntl2_v10.csv') |>
                        'WA' = 'Waubesa', 
                        'WI' = 'Wingra'))
 
+read_csv('InputData/ntl2_v10.csv') %>% filter(lakeid == 'WI') %>% 
+  filter(cl == max(cl, na.rm = T))
+
+read_csv('InputData/ntl2_v10.csv') %>% filter(lakeid == 'WI') %>% 
+  filter(depth > 2) %>% select(sampledate, depth, cl)
+
 older = read_csv('InputData/MadisonLakes_chloride[38].csv') |> 
   mutate(Date = mdy(Date), cl = Chloride.mgL) |> 
   filter(Date <= as.Date('1975-01-01'))
