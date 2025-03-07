@@ -1,4 +1,6 @@
-library(tidyverse)
+##################################################################
+# Manuscript statistics 
+##################################################################
 
 # Chloride ranges
 monthlyCl %>% filter(year == 1963)
@@ -27,13 +29,19 @@ filter(met.year %>% ungroup(), totalSnow == max(totalSnow, na.rm = T))
 tail(met.year, n = 10)
 
 # Scenario based analysis
-scenario_data <- bind_rows(
-  ss.future.0 %>% mutate(scenario = "100% Reduction") |> mutate(reduction = '100%'),
-  ss.future.25 %>% mutate(scenario = "75% Reduction") |> mutate(reduction = '75%'),
-  ss.future.50 %>% mutate(scenario = "50% Reduction") |> mutate(reduction = '50%'),
-  ss.future.75 %>% mutate(scenario = "25% Reduction") |> mutate(reduction = '25%'),
-  ss.future.100 %>% mutate(scenario = "0% Reduction") |> mutate(reduction = '0%')) |> 
-  mutate(scenario = factor(scenario, levels = c("0% Reduction", "25% Reduction", "50% Reduction", "75% Reduction", "100% Reduction"))) |> 
+# scenario_data <- bind_rows(
+#   ss.future.0 %>% mutate(scenario = "100% Reduction") |> mutate(reduction = '100%'),
+#   ss.future.25 %>% mutate(scenario = "75% Reduction") |> mutate(reduction = '75%'),
+#   ss.future.50 %>% mutate(scenario = "50% Reduction") |> mutate(reduction = '50%'),
+#   ss.future.75 %>% mutate(scenario = "25% Reduction") |> mutate(reduction = '25%'),
+#   ss.future.100 %>% mutate(scenario = "0% Reduction") |> mutate(reduction = '0%')) |> 
+  # mutate(scenario = factor(scenario, levels = c("0% Reduction", "25% Reduction", "50% Reduction", "75% Reduction", "100% Reduction"))) |>
+  # mutate(reduction = factor(reduction, levels = c("0%", "25%", "50%", "75%", "100%")))
+
+# Save output --> read for faster access 
+# write_csv(scenario_data, 'data_output/scenario_output.csv')
+scenario_data = read_csv('data_output/scenario_output.csv') %>% 
+  mutate(scenario = factor(scenario, levels = c("0% Reduction", "25% Reduction", "50% Reduction", "75% Reduction", "100% Reduction"))) |>
   mutate(reduction = factor(reduction, levels = c("0%", "25%", "50%", "75%", "100%")))
 
 ###### Annual means ######

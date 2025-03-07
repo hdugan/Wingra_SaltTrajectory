@@ -1,5 +1,5 @@
 ##################################################################
-# 
+# Load all necessary data
 ##################################################################
 
 # Load libraries
@@ -12,30 +12,25 @@ library(zoo)
 library(metR)
 
 # Load chloride data, remove outliers
-source('src/chlorideProcess.R')
+source('src/0_chlorideProcess.R')
 # Load GIS datasets to calculate areas, road network 
-source('src/GISprocess.R')
-# Load map
-source('src/Figure_Map.R')
-
-################# Data loading and cleaning ################ 
-### Load climate data
+source('src/0_GISprocess.R')
+# Load climate data
 source('src/0_LoadMet.R')
 
-# Data from arboretum and charmany farms
-
+################# Data loading and cleaning ################ 
 # ET monthly from open ET monthly ensemble
-openET.wingra = read_csv('InputData/WingraOpenETensemble.csv')
+openET.wingra = read_csv('data_input/WingraOpenETensemble.csv')
 
-# Mean ET 0.627 for Wingra
+# Summarise ET by month
 openETmonth = openET.wingra |> 
   mutate(year = year(Date), month = month(Date)) |> 
   group_by(month) |> 
   summarise(et = mean(et_ensemble_mad/1000)) |> 
   ungroup() 
 
-# Subtracting ET from Precipitation to find runoff (assuming ET = 0.75 each year)
-# If runoff was 0 for a year, assume that it is 0.05
+# Subtracting ET from Precipitation to find runoff 
+# Constrain non-negative, and adjust for frozen months
 ET_Precip <- met.month %>% 
   ungroup() |> 
   left_join(openETmonth) |> 
@@ -50,13 +45,13 @@ ET_Precip <- met.month %>%
 
 range(ET_Precip$runoff)
 
-ggplot(ET_Precip) + 
-  geom_path(aes(x = sampledate, y = runoff))
+# ggplot(ET_Precip) + 
+#   geom_path(aes(x = sampledate, y = runoff))
 
 ### Load chloride data set from Public Health Madison Dane County
 cl.outliers
 
-# Calculate annual Cl values by averaging out June-September
+# Calculate monthly Cl values
 monthlyCl = cl.outliers %>% 
   filter(Lake %in% c('Wingra')) |> 
   mutate(year = year(Date), month = month(Date)) |>
@@ -68,22 +63,15 @@ monthlyCl = cl.outliers %>%
 # Convert road salt tons to kg (907.185 kg/ 1 ton)
 # Divide all values by 1252066.52 meters (city of Madison salt route mileage) 
 # 1 kg of NaCl, considering the molar mass ratio, approximately 390g of sodium and 610g of chloride
-roadSalt = read_csv('InputData/CityMadison_roadsalt_2024update.csv') 
-ggplot(roadSalt)+
-  geom_point(aes(x = TotalSalt_tons, y = DaneCounty))
 
-#### For Wingra
-roadSalt = read_csv('InputData/CityMadison_roadsalt_2024update.csv') |> 
+#### For Wingra, esimate privat use based on snowfall totals
+roadSalt = read_csv('data_input/CityMadison_roadsalt_2024update.csv') |> 
   select(YearStart, wateryear = YearEnd, TotalSnow_in, TotalSalt_tons, DaneCounty) |>
   left_join(met.year) %>% 
   mutate(ExtraPrivate_Estimate = case_when(wateryear <= 1970 ~ totalSnow * 39.37 * 50,
                                            wateryear <= 1980 ~ totalSnow * 39.37 * 200,
                                            wateryear <= 2010 ~ totalSnow * 39.37 * 200,
                                            wateryear <= 2025 ~ totalSnow * 39.37 * 300)) %>% 
-  # mutate(ExtraPrivate_Estimate = case_when(wateryear <= 1970 ~ TotalSnow_in * 50,
-  #                                          wateryear <= 1980 ~ TotalSnow_in * 150,
-  #                                          wateryear <= 2010 ~ TotalSnow_in * 200,
-  #                                          wateryear <= 2025 ~ TotalSnow_in * 300)) %>% 
   mutate(wingra_tons = (TotalSalt_tons * 0.0866) + (ExtraPrivate_Estimate* 0.0866)) |> 
   mutate(privatePublicRatio = ExtraPrivate_Estimate/TotalSalt_tons) %>% 
   mutate(salt_kg = wingra_tons * 907.185) |>
