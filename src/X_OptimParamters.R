@@ -72,11 +72,7 @@ runoffpars.function <- function(pars) {
   
 }
 
-runoffpars.function(pars = c(0.3,0.1,0.35))
-runoffpars.function(pars = c(0.25,0.1,0.35))
-
-
+# Can optimize two or three parameters
 optim(par = c(0.25,0.1,0.35), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 20))$par
 optim(par = c(0.2,0.2), fn = runoffpars.function, method = 'Nelder-Mead', control = list(maxit = 50))$par
-# optim(par = c(0.18,0.3), fn = runoffpars.function, method = 'SANN', control = list(maxit = 1000))$par
 

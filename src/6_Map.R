@@ -5,9 +5,11 @@ library(FedData)
 library(ggspatial)
 library(tidyverse)
 
+# Must run 0_GISprocess first
+
 # Load watershed
-wingraWS = st_read('GISdata/YaharaBasins/Wingra_Basin.shp')
-lakewingra = st_read('GISdata/YaharaLakes/YaharaLakes_DaneCty.shp') %>% 
+wingraWS = st_read('data_GIS/YaharaBasins/Wingra_Basin.shp')
+lakewingra = st_read('data_GIS/YaharaLakes/YaharaLakes_DaneCty.shp') %>% 
   filter(NAME == 'Lake Wingra')
 
 # # Load NCLD data
@@ -16,7 +18,7 @@ nlcd <- get_nlcd(template = wingraWS,
 # Plot with terra::plot
 terra::plot(nlcd)
 
-nlcd.2023 = terra::rast('GISdata/NCLD/Annual_NLCD_LndCov_2023_CU_C1V0_5yBUfLryZkDCeOYocVzN.tiff')
+nlcd.2023 = terra::rast('data_GIS/NCLD/Annual_NLCD_LndCov_2023_CU_C1V0_5yBUfLryZkDCeOYocVzN.tiff')
 terra::plot(nlcd.2023)
 
 # Transform CRS
