@@ -3,19 +3,19 @@
 ###############################################################
 
 ### Load climate data from Arb and Charmany Farms
-rawmet = read_csv('InputData/Climate/3944435.csv') |> 
+rawmet = read_csv('data_input/Climate/3944435.csv') |> 
   mutate(PRCP = if_else(PRCP > 1000, NA, PRCP)) %>% 
   filter(STATION == 'USC00471416')  # select Charmany Farms
 
 #### Data from Dane County airport ###
 # Load most recent 2024 data from Dane County airport
-met2024 = read_csv('InputData/Climate/3857041.csv') |> 
+met2024 = read_csv('data_input/Climate/3857041.csv') |> 
   mutate(avg_air_temp_adjusted = TAVG) %>% 
   rename(sampledate = DATE) |> 
   select(sampledate, avg_air_temp_adjusted)
 
 # Load core dataset (currently ends Dec 2023)
-airportMet = read_csv('InputData/Climate/ntl20_v13.csv') |> 
+airportMet = read_csv('data_input/Climate/ntl20_v13.csv') |> 
   bind_rows(met2024) |> # bind 2024 data
   group_by(sampledate) |> 
   summarise(temp_mean = mean(avg_air_temp_adjusted, na.rm = T)) %>% 
