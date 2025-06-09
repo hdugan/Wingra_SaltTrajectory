@@ -264,8 +264,8 @@ res.df = met.year %>%
   mutate(pred.precip = fitted(lm(totalPrecip ~ wateryear))) %>%
   mutate(residuals.precip = totalPrecip - pred.precip) %>% 
   left_join(cl.res) %>% ungroup() %>% 
-  mutate(p.res = rollapplyr(residuals.precip, 3, mean, align = 'center', fill = NA)) %>% 
-  mutate(cl.res = rollapplyr(residuals, 3, mean, align = 'center', fill = NA, na.rm=T)) %>% 
+  mutate(p.res = rollapplyr(residuals.precip, 3, mean, align = 'right', fill = NA)) %>% 
+  mutate(cl.res = rollapplyr(residuals, 3, mean, align = 'right', fill = NA, na.rm=T)) %>% 
   mutate(p.res.scale = scale(p.res), cl.res.scale = scale(cl.res))
   
 ggplot(res.df) +

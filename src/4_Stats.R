@@ -125,3 +125,23 @@ y.2100 <- scenario_data %>%
   summarize(avg_concentration = mean(CL.mean, na.rm = TRUE), min(CL.mean, na.rm = T), max(CL.mean, na.rm = T))
 print(y.2100)
 
+
+
+
+# Road salt per km
+roadSalt = read_csv('data_input/CityMadison_roadsalt_2024update.csv') |> 
+  select(YearStart, Madison_SaltPerLaneMile, Dane_SaltPerLaneMile)
+
+
+# Identify gaps in monthly data
+# Full monthly sequence from min to max
+full_months <- data.frame(
+  sampledate = seq(from = as.Date('1960-07-01'),
+             to = as.Date('2024-11-01'),
+             by = "month")
+)
+missing_months <- anti_join(full_months, monthlyCl, by = "sampledate")
+print(missing_months)
+1- (nrow(missing_months)/nrow(full_months))
+
+table(month(missing_months$sampledate))
