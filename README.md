@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/823213356.svg)](https://doi.org/10.5281/zenodo.15920506)
+
 ## Code repository for *Modeling the feasibility of reducing chloride concentrations in an urban lake due to road salt runoff*
 
 The dynamic model presented here is based on:
